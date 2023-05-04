@@ -1,0 +1,10 @@
+{
+    "name": "website-testing-lambda",
+    "version": "1.0.0",
+    "main": "testWebsite.js",
+    "dependencies": {
+        "chrome-aws-lambda": "^9.1.0",
+        "puppeteer": "^20.1.0",
+        "puppeteer-core": "^9.1.1"
+    }
+}

@@ -1,6 +1,6 @@
 # Website Analysis Tools
 
-This project consists of two scripts that help you analyze websites: `capture.js` and `compare.js`.
+This project consists of two scripts that help you analyze websites: `capture.js` and `compare.js`. The use case for this project is migration of scripts from one CDN to another for a large volume of sites. *It will produce false positives if the site has dynamically generated pixels and scripts*. 
 
 ## Prerequisites
 

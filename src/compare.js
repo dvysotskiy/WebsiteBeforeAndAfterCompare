@@ -10,20 +10,28 @@ function findReportByUrl (reports, url) {
   return reports.find(report => report.url === url)
 }
 
-function compareCookies (cookies1, cookies2) {
+function compareCookies(cookies1, cookies2, compareCookieValues) {
   if (cookies1.length !== cookies2.length) {
-    return false
+    return false;
   }
 
   for (const cookie1 of cookies1) {
-    const matchingCookie = cookies2.find(cookie2 => cookie1.name === cookie2.name)
+    const matchingCookie = cookies2.find((cookie2) => cookie1.name === cookie2.name);
+
     if (!matchingCookie) {
-      return false
+      return false;
+    }
+
+    // Check the cookie values only if the `compareCookieValues` is true
+    if (compareCookieValues && cookie1.value !== matchingCookie.value) {
+      return false;
     }
   }
 
-  return true
+  return true;
 }
+
+
 
 function compareScripts (scripts1, scripts2, compareScriptNamesOnly) {
   if (scripts1.length !== scripts2.length) {
@@ -90,14 +98,15 @@ function createCookiesTable(cookies1, cookies2, fileName1, fileName2) {
   const sortedCookies = Array.from(allCookies).sort((a, b) => a.localeCompare(b));
 
   for (const cookieName of sortedCookies) {
-    const cookie1Exists = cookies1.some((cookie) => cookie.name === cookieName);
-    const cookie2Exists = cookies2.some((cookie) => cookie.name === cookieName);
-    const mismatch = cookie1Exists !== cookie2Exists;
+    const cookie1 = cookies1.find((cookie) => cookie.name === cookieName);
+    const cookie2 = cookies2.find((cookie) => cookie.name === cookieName);
+    const nameMismatch = !cookie1 || !cookie2;
+    const valueMismatch = compareCookieValues && cookie1 && cookie2 && cookie1.value !== cookie2.value;
     rows.push(
       `<tr>
-        <td${mismatch ? ' class="red-text"' : ''}>${cookieName}</td>
-        <td>${cookie1Exists ? '✔️' : ''}</td>
-        <td>${cookie2Exists ? '✔️' : ''}</td>
+        <td${nameMismatch || valueMismatch ? ' class="red-text"' : ''}>${cookieName}</td>
+        <td>${cookie1 ? '✔️' : ''}</td>
+        <td>${cookie2 ? '✔️' : ''}</td>
       </tr>`
     );
   }
@@ -118,10 +127,11 @@ function createCookiesTable(cookies1, cookies2, fileName1, fileName2) {
   `;
 }
 
-
 function generateHtmlMismatchReport (mismatches, fileName1, fileName2) {
   const mismatchSections = mismatches.map(mismatch => {
-    const scriptTable = createScriptsTable(mismatch.scriptMismatches[0][0], mismatch.scriptMismatches[0][1], fileName1, fileName2)
+    const scriptTable = mismatch.scriptMismatches.length > 0 && mismatch.scriptMismatches[0].length === 2
+  ? createScriptsTable(mismatch.scriptMismatches[0][0], mismatch.scriptMismatches[0][1], fileName1, fileName2)
+  : '';
     const cookieTable = mismatch.cookieMismatches.length > 0
       ? createCookiesTable(mismatch.cookieMismatches[0][0], mismatch.cookieMismatches[0][1], fileName1, fileName2)
       : ''
@@ -194,13 +204,14 @@ function generateHtmlMismatchReport (mismatches, fileName1, fileName2) {
 
 const args = process.argv.slice(2)
 
-if (args.length !== 3) {
-  console.error('Please provide two file names and compareScriptNamesOnly flag (true or false) as command line arguments.')
-  process.exit(1)
+if (args.length !== 4) {
+  console.error("Please provide two file names, compareScriptNamesOnly flag (true or false), and compareCookieValues flag (true or false) as command line arguments.");
+  process.exit(1);
 }
 
-const [file1, file2, compareScriptNamesOnlyArg] = args
-const compareScriptNamesOnly = compareScriptNamesOnlyArg.toLowerCase() === 'true'
+const [file1, file2, compareScriptNamesOnlyArg, compareCookieValuesArg] = args;
+const compareScriptNamesOnly = compareScriptNamesOnlyArg.toLowerCase() === "true";
+const compareCookieValues = compareCookieValuesArg.toLowerCase() === "true";
 
 const report1 = readJsonFile(file1)
 const report2 = readJsonFile(file2)
@@ -214,11 +225,11 @@ for (const entry1 of report1) {
     let mismatchReasons = []
     const scriptMismatches = []
     const cookieMismatches = []
-    if (!compareCookies(entry1.cookies, entry2.cookies)) {
-      mismatchReasons.push('Cookie mismatch')
-      const sortedCookies1 = entry1.cookies.slice().sort((a, b) => a.name.localeCompare(b.name))
-      const sortedCookies2 = entry2.cookies.slice().sort((a, b) => a.name.localeCompare(b.name))
-      cookieMismatches.push([sortedCookies1, sortedCookies2])
+    if (!compareCookies(entry1.cookies, entry2.cookies, compareCookieValues)) {
+      mismatchReasons.push("Cookie mismatch");
+      const sortedCookies1 = entry1.cookies.slice().sort((a, b) => a.name.localeCompare(b.name));
+      const sortedCookies2 = entry2.cookies.slice().sort((a, b) => a.name.localeCompare(b.name));
+      cookieMismatches.push([sortedCookies1, sortedCookies2]);
     }
 
     if (!compareScripts(entry1.scripts, entry2.scripts, compareScriptNamesOnly)) {
